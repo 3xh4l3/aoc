@@ -9,7 +9,13 @@ import (
 )
 
 func main() {
-	file, err := os.Open("input.txt")
+	s1, s2 := day_2("input.txt")
+	fmt.Printf("Total score for Part 1: %d\n", s1)
+	fmt.Printf("Total score for Part 2: %d\n", s2)
+}
+
+func day_2(filename string) (int, int) {
+	file, err := os.Open(filename)
 	//file, err := os.Open("example.txt")
 	if err != nil {
 		log.Fatal(err)
@@ -47,8 +53,7 @@ func main() {
 		// Part 2 - Guess shape by result
 		s2 += r + get_shape(a, r)
 	}
-	fmt.Printf("Total score for Part 1: %d\n", s1)
-	fmt.Printf("Total score for Part 2: %d\n", s2)
+	return s1, s2
 }
 
 func get_result(a, b int) (score int) {
