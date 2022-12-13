@@ -33,24 +33,6 @@ func (m *monkey) unsetItems() {
 	m.items = make([]uint64, 0)
 }
 
-var (
-	// F*ng monkeys
-	monkeys = []monkey{}
-	// Operations for new worry level
-	ops = map[string]func(uint64, uint64) uint64{
-		"*": func(old, op2 uint64) (new uint64) { return old * op2 },
-		"+": func(old, op2 uint64) (new uint64) { return old + op2 },
-	}
-	// Parser for one monkey
-	monkey_regex = []string{
-		`Monkey (\d+):\n\s+Starting items: (?P<items>.*)`,
-		`\s+Operation: new = old (?P<operation>.) (?P<op2>\S+)`,
-		`\s+Test: divisible by (?P<div>\d+)`,
-		`\s+If true: throw to monkey (?P<pos_rx>\d+)`,
-		`\s+If false: throw to monkey (?P<neg_rx>\d+)`,
-	}
-)
-
 func main() {
 	p1, p2 := day_11("input.txt")
 	fmt.Printf("Part one: %d\n", p1)
@@ -58,6 +40,25 @@ func main() {
 }
 
 func day_11(input string) (p1, p2 int) {
+	var (
+		// F*ng monkeys
+		monkeys = []monkey{}
+		// Operations for new worry level
+		ops = map[string]func(uint64, uint64) uint64{
+			"*": func(old, op2 uint64) (new uint64) { return old * op2 },
+			"+": func(old, op2 uint64) (new uint64) { return old + op2 },
+		}
+		// Parser for one monkey
+		monkey_regex = []string{
+			`Monkey (\d+):\n\s+Starting items: (?P<items>.*)`,
+			`\s+Operation: new = old (?P<operation>.) (?P<op2>\S+)`,
+			`\s+Test: divisible by (?P<div>\d+)`,
+			`\s+If true: throw to monkey (?P<pos_rx>\d+)`,
+			`\s+If false: throw to monkey (?P<neg_rx>\d+)`,
+		}
+		modulus uint64 = 1
+	)
+
 	data, _ := os.ReadFile(input)
 
 	// Prepare regexps and parse file
@@ -77,6 +78,8 @@ func day_11(input string) (p1, p2 int) {
 				monkey.operation = ops[match[grp_id]]
 			case "div":
 				monkey.div = getInt("divisor", match[grp_id])
+				// Get common module
+				modulus *= monkey.div
 			case "pos_rx":
 				monkey.pos_rx = getInt("positive recepient", match[grp_id])
 			case "neg_rx":
@@ -91,13 +94,14 @@ func day_11(input string) (p1, p2 int) {
 		}
 		monkeys = append(monkeys, monkey)
 	}
-	p1 = monkeyBusiness(monkeys, 20, 3)
-	// p2 = monkeyBusiness(monkeys, 10000, 1)
+	p1 = monkeyBusiness(monkeys, modulus, 20, 3)
+	p2 = monkeyBusiness(monkeys, modulus, 10000, 1)
 
 	return
 }
 
-func monkeyBusiness(m []monkey, rounds int, damper float64) int {
+func monkeyBusiness(m []monkey, modulus uint64, rounds int, damper float64) int {
+	monkeys := make([]monkey, len(m))
 	copy(monkeys, m)
 	// Monkey business starts here
 	// 20 rounds
@@ -113,9 +117,8 @@ func monkeyBusiness(m []monkey, rounds int, damper float64) int {
 				} else {
 					new_w_lvl = monkey.operation(item, monkey.op2)
 				}
-				if item > new_w_lvl {
-					panic("Uint64 overflowed")
-				}
+				// Get module for prevent overflow
+				new_w_lvl = new_w_lvl % modulus
 				// boring...
 				new_w_lvl = uint64(math.Floor(float64(new_w_lvl) / damper))
 				// throw to another monkey
@@ -129,7 +132,7 @@ func monkeyBusiness(m []monkey, rounds int, damper float64) int {
 			monkeys[i].unsetItems()
 		}
 	}
-
+	// Count actions
 	actions := make([]int, 0)
 	for _, m := range monkeys {
 		actions = append(actions, m.actions)
